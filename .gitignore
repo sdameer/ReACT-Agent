@@ -1,6 +1,7 @@
 .env
 rv
 .vscode
+__pycache__
 .langgraph_api
 agent/__pycache__
 backend/__pycache__
