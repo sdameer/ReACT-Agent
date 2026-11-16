@@ -3,5 +3,6 @@ rv
 .vscode
 .langgraph_api
 agent/__pycache__
+backend/__pycache__
 prompts/__pycache__
 tools/__pycache__
