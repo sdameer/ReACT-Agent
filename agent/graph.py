@@ -1,6 +1,8 @@
+from agent.agent import * 
+
 app = StateGraph(AgentState)
 
-app.add_node("tools",ToolNode(tools = tools))
+app.add_node("tools",ToolNode(tools = TOOLS))
 app.add_node("agent",model_call)
 
 app.set_entry_point("agent")

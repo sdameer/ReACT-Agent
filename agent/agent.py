@@ -6,6 +6,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, END
+from langgraph.prebuilt import ToolNode
 
 from tools.base_tools import TOOLS
 from prompts.base import BASE_PROMPT
