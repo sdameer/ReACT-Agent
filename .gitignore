@@ -7,3 +7,5 @@ agent/__pycache__
 backend/__pycache__
 prompts/__pycache__
 tools/__pycache__
+database/__pycache__
+database/models/__pycache__

@@ -1,4 +1,6 @@
-from connect import get_db_connection
+from database.connect import get_db_connection
+
+
 
 def init_db():
     with get_db_connection() as conn:
