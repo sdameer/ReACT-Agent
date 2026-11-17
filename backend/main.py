@@ -1,4 +1,4 @@
-
+from typing import Optional
 from fastapi import FastAPI
 from pydantic import BaseModel
 from langchain_core.messages import HumanMessage
@@ -8,36 +8,42 @@ from database.model.memory import init_db
 from database.model.user import create_user, create_conversation
 from database.helper import load_messages, save_messages
 
-app = FastAPI()
+app = FastAPI(title="ReAct Agent API")
 
-# Initialize database and create a conversation
+# Initialize database tables on server startup (similar to running migrations)
 init_db()
-
-user_id = create_user("ameer")
-thread_id = create_conversation(user_id, "First Chat")
 
 
 class ChatRequest(BaseModel):
     message: str
+    user_name: str = "ameer"
+    thread_id: Optional[str] = None
 
 
 @app.post("/chat")
-def chat(request: ChatRequest):
+async def chat(request: ChatRequest):
+    #  user exists or user_id
+    user_id = create_user(request.user_name)
 
-    # Load previous messages
+    # new conversation or an existing one
+    thread_id = request.thread_id
+    if not thread_id:
+        # new thread
+        thread_id = create_conversation(user_id, title=f"Chat with {request.user_name}")
+
+    # history
     history = load_messages(thread_id)
     old_count = len(history)
 
-    # Add new user message
     messages = history + [HumanMessage(content=request.message)]
 
-    # Invoke agent
-    res = graph.invoke({"messages": messages})
-
-    # Save only new messages
+    # Run agent
+    res = await graph.ainvoke({"messages": messages})
+    
+    # Append to db 
     new_messages = res["messages"][old_count:]
     save_messages(thread_id, new_messages)
-
+    
     return {
         "response": res["messages"][-1].content,
         "thread_id": thread_id
