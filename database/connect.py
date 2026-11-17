@@ -41,3 +41,10 @@ def get_db_connection():
     finally:
         # return the connection back to the pool for the next request
         db_pool.putconn(conn)        
+        
+        
+
+def close_db_pool():
+    if db_pool:
+        db_pool.closeall()
+        print("Database connection pool closed.")
