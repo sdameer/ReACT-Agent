@@ -1,4 +1,5 @@
 from psycopg2.extras import Json
+from fastapi import HTTPException
 
 from langchain_core.messages import (
     message_to_dict,
@@ -47,7 +48,8 @@ def save_messages(thread_id, messages):
             result = cur.fetchone()
 
             if result is None:
-                raise ValueError("Conversation not found")
+                # raise ValueError("Conversation not found")
+                raise HTTPException(status_code=404, detail="Conversation not found")
 
             conversation_id = result[0]
 
@@ -68,3 +70,16 @@ def save_messages(thread_id, messages):
                 SET updated_at = CURRENT_TIMESTAMP
                 WHERE id = %s;
             """, (conversation_id,))
+            
+            
+            
+def conversation_exists(thread_id: str) -> bool:
+    """
+    before running the agent we are running this function to check
+    if the conversation exists in the database or not    
+    """
+    
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM conversations WHERE thread_id = %s;", (thread_id,))
+            return cur.fetchone() is not None            
