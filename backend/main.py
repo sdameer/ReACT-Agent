@@ -40,7 +40,9 @@ async def lifespan(app: FastAPI):
     print("Server shutting down...")
     close_db_pool()
 
+
 app = FastAPI(title="ReAct Agent API", lifespan=lifespan)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -49,6 +51,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 class ChatRequest(BaseModel):
     message: str
@@ -146,18 +149,26 @@ async def chat_stream(request: ChatRequest):
     async def event_generator():
         final_messages = []
         try:
-            # astream_events v2 yields fine-grained LLM chunks and tool invocations
+            # as this is SSE we have send data to agent it will send the data in chunks 
             async for event in graph.astream_events({"messages": messages}, version="v2"):
                 event_type = event["event"]
-
-                # 1. Token chunk from LLM
+                """
+                events send by the LLM 
+                    on_chat_model_stream
+                    on_tool_start
+                    on_tool_end
+                    on_chain_start
+                    on_chain_end                
+                """
+                
+                # token chunk from LLM
                 if event_type == "on_chat_model_stream":
                     chunk = event["data"]["chunk"]
                     if getattr(chunk, "content", None):
                         payload = json.dumps({"type": "token", "content": chunk.content})
                         yield f"data: {payload}\n\n"
 
-                # Agent begins calling a tool 
+                # tool calling
                 elif event_type == "on_tool_start":
                     payload = json.dumps({
                         "type": "tool_start",
@@ -166,7 +177,7 @@ async def chat_stream(request: ChatRequest):
                     })
                     yield f"data: {payload}\n\n"
 
-                # Tool execution finished
+                # Tool execution 
                 elif event_type == "on_tool_end":
                     payload = json.dumps({
                         "type": "tool_end",
@@ -175,10 +186,13 @@ async def chat_stream(request: ChatRequest):
                     })
                     yield f"data: {payload}\n\n"
 
-                # Top-level graph completed
+                # graph completed
                 elif event_type == "on_chain_end":
                     out = event["data"].get("output")
+                    print(f"-----------\noutput : {out}\n")
                     if isinstance(out, dict) and "messages" in out:
+                        # the no of current messages > the previous
+                        # it means we have new messages so update the db
                         if len(out["messages"]) >= len(messages):
                             final_messages = out["messages"]
 
@@ -187,7 +201,10 @@ async def chat_stream(request: ChatRequest):
             yield f"data: {payload}\n\n"
             return
 
-        # Persist newly generated messages to DB
+        # when we have final messages which are new convo messages
+        # and 
+        # why to add old messages to ... 
+        # so get the old count ans slice the old count 
         if final_messages and len(final_messages) > old_count:
             new_messages = final_messages[old_count:]
             # saving new messages to the thread id
