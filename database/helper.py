@@ -1,5 +1,6 @@
 from psycopg2.extras import Json
 from fastapi import HTTPException
+from uuid import UUID
 
 from langchain_core.messages import (
     message_to_dict,
@@ -74,12 +75,13 @@ def save_messages(thread_id, messages):
             
             
 def conversation_exists(thread_id: str) -> bool:
-    """
-    before running the agent we are running this function to check
-    if the conversation exists in the database or not    
-    """
-    
+    try:
+        # Validate that it's a valid UUID, but store as string
+        valid_uuid_str = str(UUID(str(thread_id)))
+    except (ValueError, TypeError, AttributeError):
+        return False
+
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT 1 FROM conversations WHERE thread_id = %s;", (thread_id,))
-            return cur.fetchone() is not None            
+            cur.execute("SELECT 1 FROM conversations WHERE thread_id = %s;", (valid_uuid_str,))
+            return cur.fetchone() is not None       
